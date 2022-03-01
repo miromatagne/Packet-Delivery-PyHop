@@ -1,6 +1,6 @@
 import pyhop
 
-
+# Descripción del estado inicial del problema
 state = pyhop.State('state')
 state.city_coordinates = {'C0': {'X': 0, 'Y': 50}, 'C1': {
     'X': 100, 'Y': 50}, 'C2': {'X': 50, 'Y': 0}}
