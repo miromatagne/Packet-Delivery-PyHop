@@ -1,15 +1,31 @@
 import pyhop
 
+# Comprobar si un elemento está en un conjunto
+# "C1" in state.cities["C0"]["connections"]
+
+# Recorrer elementos de un conjunto
+# for city in state.cities["C0"]["connections"]:
+
 # Descripción del estado inicial del problema
-state = pyhop.State('state')
-state.city_coordinates = {'C0': {'X': 0, 'Y': 50}, 'C1': {
-    'X': 100, 'Y': 50}, 'C2': {'X': 50, 'Y': 0}}
-state.intermediary_point_coordintates = {'P_01': {'X': 50, 'Y': 100}, 'P_12': {
-    'X': 75, 'Y': 0}}
-state.city_connections = {'C0': {'C1', 'C2'},
-                          'C1': {'C0', 'C2'}, 'C2': {'C0', 'C1'}}
-state.intermediate_point_connections = {'P_01': {'C0', 'C1'},
-                                        'P_12': {'C1', 'C2'}}
-state.packet_locations = {'P1': 'C0', 'P2': 'C0'}
-state.truck_locations = {'T1': 'C1', 'T2': 'C0'}
-state.driver_locations = {'D1': 'P_01', 'D2': 'C1'}
+state.cities = {
+    'C0': {'location': {'X': 0, 'Y': 50}, 'connections': {'C1', 'C2', 'P01'}},
+    'C1': {'location': {'X': 100, 'Y': 50}, 'connections': {'C0', 'C2', 'P01', 'P02'}},
+    'C2': {'location': {'X': 50, 'Y': 0}, 'connections': {'C0', 'C1', 'P02'}}
+}
+state.intermediary_points = {
+    'P01': {'location': {'X': 50, 'Y': 100}, 'connections': {'C0', 'C1'}},
+    'P02': {'location': {'X': 75, 'Y': 0}, 'connections': {'C1', 'C2'}}
+}
+state.packets = {
+    'P1': {'location': 'C0'},
+    'P2': {'location': 'C0'}
+}
+state.trucks = {
+    'T1': {'location': 'C1'},
+    'T2': {'location': 'C0'}
+}
+state.drivers = 
+{
+    'D1': {'location': 'P01'},
+    'D2': {'location': 'C1'}
+}
