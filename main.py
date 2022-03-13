@@ -23,17 +23,22 @@ def distance(c1, c2):
     return sqrt(x+y)
 
 # Selecciona el camion más cercano
+
+
 def seleccionarCamion(state, dest):
     min_distance = float('inf')
     best_truck = None
     for cam in state.trucks:
-        distance_to_dest = distance(state.cities[cam['location']]['location'], state.cities[dest]['location'])
+        distance_to_dest = distance(
+            state.cities[state.trucks[cam]['location']]['location'], state.cities[dest]['location'])
         if distance_to_dest < min_distance:
             best_truck = cam
             min_distance = distance_to_dest
     return best_truck
 
 # Selecciona el conductor más cercano
+
+
 def seleccionarConductor(state, dest):
     min_distance = float('inf')
     best_con = None
@@ -43,7 +48,7 @@ def seleccionarConductor(state, dest):
             location = state.intermediary_points[driver_loc]['location']
         else:
             location = state.cities[state.drivers[con]
-                                        ['location']]['location']
+                                    ['location']]['location']
         distance_to_dest = distance(location, state.cities[dest]['location'])
         if distance_to_dest < min_distance:
             best_con = con
@@ -51,39 +56,43 @@ def seleccionarConductor(state, dest):
     return best_con
 
 
-def seleccionarSiguienteDestino(state, origin, dest, con, conduce=False):
+def seleccionarSiguienteDestino(state, origin, destination, con, conduce=False):
     min_distance = float('inf')
     best_dest = None
-    possible_dests = []
-    origin_is_city = False
+    possible_next = []
+    origin_is_city = origin in state.cities.keys()
 
-    if origin in state.intermediary_points.keys():
-        possible_dests = state.intermediary_points[origin]['connections']
+    if not origin_is_city:
+        possible_next = state.intermediary_points[origin]['connections']
     else:
-        possible_dests = state.cities[origin]['connections']
-        origin_is_city = True
+        possible_next = state.cities[origin]['connections']
 
-    for dest in possible_dests:
-        dest_is_city = dest in state.cities.keys()
+    destination_is_city = destination in state.cities.keys()
+    for next in possible_next:
+        next_is_city = next in state.cities.keys()
 
-        if conduce and not dest_is_city:
+        if conduce and not next_is_city:
             continue
 
-        if not conduce and (origin_is_city and dest_is_city):
+        if not conduce and (origin_is_city and next_is_city):
             continue
 
-        if dest not in state.drivers[con]['path']:
-            if origin_is_city and dest_is_city:
-                distance_to_dest = distance(state.cities[origin]['location'], state.cities[dest]['location'])
-            elif origin_is_city and not dest_is_city:
-                distance_to_dest = distance(state.cities[origin]['location'], state.intermediary_points[dest]['location'])
-            elif not origin_is_city and dest_is_city:
-                distance_to_dest = distance(state.intermediary_points[origin]['location'], state.cities[dest]['location'])
-            elif not origin_is_city and not dest_is_city:
-                distance_to_dest = distance(state.intermediary_points[origin]['location'], state.intermediary_points[dest]['location'])
-            
+        if next not in state.drivers[con]['path']:
+            if next_is_city and destination_is_city:
+                distance_to_dest = distance(
+                    state.cities[destination]['location'], state.cities[next]['location'])
+            elif next_is_city and not destination_is_city:
+                distance_to_dest = distance(
+                    state.cities[next]['location'], state.intermediary_points[destination]['location'])
+            elif not next_is_city and destination_is_city:
+                distance_to_dest = distance(
+                    state.intermediary_points[next]['location'], state.cities[destination]['location'])
+            elif not next_is_city and not destination_is_city:
+                distance_to_dest = distance(
+                    state.intermediary_points[destination]['location'], state.intermediary_points[next]['location'])
+
             if distance_to_dest < min_distance:
-                best_dest = dest
+                best_dest = next
                 min_distance = distance_to_dest
 
     return best_dest
@@ -154,9 +163,10 @@ def conducir_op(state, cam, con, dest):
         return state
     return False
 
-def reset_camino_conductor_op(state, con):
-    state.drivers[con]['path'] = []
-    return state
+
+# def reset_camino_conductor_op(state, con):
+#     state.drivers[con]['path'] = []
+#     return state
 
 
 pyhop.declare_operators(cargar_paquete, descargar_paquete,
@@ -203,7 +213,7 @@ def camion_en_destino(state, cam, dest):
 
 def camion_en_otro_lugar(state, cam, dest):
     truck_loc = state.trucks[cam]['location']
-    con = seleccionarConductor(state, dest)
+    con = seleccionarConductor(state, truck_loc)
     return [
         ('conseguir_conductor', con, truck_loc),
         ('conducir', cam, con, dest)
@@ -217,14 +227,21 @@ pyhop.declare_methods('mover_camion', camion_en_destino, camion_en_otro_lugar)
 
 def conductor_en_destino(state, con, dest):
     if state.drivers[con]['location'] == dest:
-        return [('reset_camino_conductor_op', con)]
+        print("Reset path")
+        state.drivers[con]['path'] = []
+        return []
+        # return [('reset_camino_conductor_op', con)]
     return False
 
 
 def conductor_en_otro_lugar(state, con, dest):
-    driver_loc = state.drivers[con]['location']
-    d = seleccionarSiguienteDestino(state, driver_loc, dest, con, conduce=False)
-    return [("mover_conductor_paso", con, d, dest)]
+    if state.drivers[con]['location'] != dest:
+        state.drivers[con]['path'].append(state.drivers[con]['location'])
+        driver_loc = state.drivers[con]['location']
+        d = seleccionarSiguienteDestino(
+            state, driver_loc, dest, con, conduce=False)
+        return [("mover_conductor_paso", con, d, dest)]
+    return False
 
 
 pyhop.declare_methods(
@@ -271,13 +288,17 @@ pyhop.declare_methods('conseguir_camion_y_conductor',
 
 def conductor_conseguido(state, con, dest):
     if state.drivers[con]['location'] == dest:
-        return [('reset_camino_conductor_op', con)]
+        print("Reset path")
+        state.drivers[con]['path'] = []
+        return []
     return False
 
 
 def conductor_por_conseguir(state, con, dest):
-    #con = seleccionarConductor(state, dest)
-    return [("mover_conductor", con, dest)]
+    # con = seleccionarConductor(state, dest)
+    if state.drivers[con]['location'] != dest:
+        return [("mover_conductor", con, dest)]
+    return False
 
 
 pyhop.declare_methods('conseguir_conductor',
@@ -290,7 +311,9 @@ def en_destino(state, cam, con, dest):
     driver_loc = state.drivers[con]['location']
     truck_loc = state.trucks[cam]['location']
     if driver_loc == truck_loc and driver_loc == dest:
-        return [('reset_camino_conductor_op', con)]
+        print("Reset path")
+        state.drivers[con]['path'] = []
+        return []
     return False
 
 
@@ -298,10 +321,13 @@ def en_otro_lugar(state, cam, con, dest):
     driver_loc = state.drivers[con]['location']
     truck_loc = state.trucks[cam]['location']
     if driver_loc == truck_loc:
-        d = seleccionarSiguienteDestino(state, truck_loc, dest, con, conduce=True)
+        d = seleccionarSiguienteDestino(
+            state, truck_loc, dest, con, conduce=True)
         return [("conducir_op", cam, con, d), ("conducir", cam, con, dest)]
     return False
 
+
+pyhop.declare_methods('conducir', en_destino, en_otro_lugar)
 
 # ====================================================================== #
 
@@ -321,6 +347,7 @@ def iterative_goal_m(state, goal):
         if data[0] == 'package':
             if state.packets[data[1]]['location'] != data[2]:
                 return [('mover_paquete', data[1], data[2]), ('iterative_goal', goal)]
+    return []
 
 
 pyhop.declare_methods('iterative_goal', iterative_goal_m)
@@ -348,7 +375,8 @@ state.price = 0
 
 # Descripción del objetivo del problema
 goal = pyhop.Goal('goal')
-goal.data = [['driver', 'D1', 'C0'], ['truck', 'T1', 'C0'],
-             ['package', 'P1', 'C1'], ['package', 'P2', 'C2']]
+goal.data = [['package', 'P1', 'C1'], [
+    'package', 'P2', 'C2'], ['driver', 'D1', 'C0'], ['truck', 'T1', 'C0']]
+#goal.data = [['package', 'P1', 'C1']]
 
 pyhop.pyhop(state, [('iterative_goal', goal)], verbose=2)
