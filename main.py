@@ -14,11 +14,20 @@ BUS_PRICE = 2
 # FUNCIONES AUXILIARES
 #############################
 
+# TODO
+
+
 def seleccionarCamion():
     return 'T1'
 
+# TODO
+
+
 def seleccionarConductor():
     return 'D1'
+
+# TODO
+
 
 def seleccionarSiguienteDestino():
     return 'C0'
@@ -27,17 +36,20 @@ def seleccionarSiguienteDestino():
 # OPERADORES
 #############################
 
+
 def cargar_paquete(state, paq, cam):
     if state.packets[paq]['location'] == state.trucks[cam]['location']:
         state.packets[paq]['location'] = cam
         return state
     return False
 
+
 def descargar_paquete(state, paq, cam):
     if state.packets[paq]['location'] == cam:
         state.packets[paq]['location'] = state.trucks[cam]['location']
         return state
     return False
+
 
 def autobus_op(state, con, dest):
     driver_loc = state.drivers[con]['location']
@@ -55,6 +67,7 @@ def autobus_op(state, con, dest):
             return state
     return False
 
+
 def caminar_op(state, con, dest):
     driver_loc = state.drivers[con]['location']
     if driver_loc in state.intermediary_points.keys():
@@ -69,6 +82,7 @@ def caminar_op(state, con, dest):
             return state
     return False
 
+
 def conducir_op(state, cam, con, dest):
     driver_loc = state.drivers[con]['location']
     truck_loc = state.trucks[cam]['location']
@@ -79,7 +93,9 @@ def conducir_op(state, cam, con, dest):
         return state
     return False
 
-pyhop.declare_operators(cargar_paquete, descargar_paquete, autobus_op, caminar_op, conducir_op)
+
+pyhop.declare_operators(cargar_paquete, descargar_paquete,
+                        autobus_op, caminar_op, conducir_op)
 print('')
 pyhop.print_operators()
 
@@ -89,10 +105,12 @@ pyhop.print_operators()
 
 # mover_paquete
 
+
 def paquete_en_destino(state, paq, dest):
     if state.packets[paq]['location'] == dest:
         return []
     return False
+
 
 def paquete_en_otro_lugar(state, paq, dest):
     cam = seleccionarCamion()
@@ -105,14 +123,18 @@ def paquete_en_otro_lugar(state, paq, dest):
         ('descargar_paquete', paq, cam)
     ]
 
-pyhop.declare_methods('mover_paquete', paquete_en_destino, paquete_en_otro_lugar)
+
+pyhop.declare_methods('mover_paquete', paquete_en_destino,
+                      paquete_en_otro_lugar)
 
 # mover_camion
+
 
 def camion_en_destino(state, cam, dest):
     if state.trucks[cam]['location'] == dest:
         return []
     return False
+
 
 def camion_en_otro_lugar(state, cam, dest):
     truck_loc = state.trucks[cam]['location']
@@ -122,22 +144,29 @@ def camion_en_otro_lugar(state, cam, dest):
         ('conducir', cam, con, dest)
     ]
 
+
 pyhop.declare_methods('mover_camion', camion_en_destino, camion_en_otro_lugar)
 
 # mover_conductor
+
 
 def conductor_en_destino(state, con, dest):
     if state.drivers[con]['location'] == dest:
         return []
     return False
 
+
 def conductor_en_otro_lugar(state, con, dest):
     d = seleccionarSiguienteDestino()
     return [("mover_conductor_paso", con, d, dest)]
 
-pyhop.declare_methods('mover_conductor', conductor_en_destino, conductor_en_otro_lugar)
+
+pyhop.declare_methods(
+    'mover_conductor', conductor_en_destino, conductor_en_otro_lugar)
 
 # mover_conductor_paso
+# TODO : añadir las condiciones que determinen cuando tomar el autobus y cuando caminar
+
 
 def autobus(state, con, d, dest):
     return [
@@ -145,57 +174,67 @@ def autobus(state, con, d, dest):
         ('mover_conductor', con, dest)
     ]
 
+
 def caminar(state, con, d, dest):
     return [
         ('caminar_op', con, d),
         ('mover_conductor', con, dest)
     ]
 
+
 pyhop.declare_methods('mover_conductor_paso', autobus, caminar)
 
 # conseguir_camion_y_conductor(dest)
+
 
 def camion_conseguido(state, cam, con, dest):
     if any(state.trucks[truck]['location'] == dest for truck in state.trucks):
         return[('conseguir_conductor', dest)]
     return False
 
+
 def camion_por_conseguir(state, dest):
     cam = seleccionarCamion()
     return [('mover_camion', cam, dest)]
 
-pyhop.declare_methods('conseguir_camion_y_conductor', camion_conseguido, camion_por_conseguir)
+
+pyhop.declare_methods('conseguir_camion_y_conductor',
+                      camion_conseguido, camion_por_conseguir)
 
 # conseguir_conductor
+
 
 def conductor_conseguido(state, dest):
     if any(state.drivers[driver]['location'] == dest for driver in state.drivers):
         return []
     return False
 
+
 def conductor_por_conseguir(state, dest):
     con = seleccionarConductor()
     return [("mover_conductor", con, dest)]
 
-pyhop.declare_methods('conseguir_conductor', conductor_conseguido, conductor_por_conseguir)
+
+pyhop.declare_methods('conseguir_conductor',
+                      conductor_conseguido, conductor_por_conseguir)
 
 # conducir
 
-def en_destino(state, com, con, dest):
+
+def en_destino(state, cam, con, dest):
     driver_loc = state.drivers[con]['location']
-    truck_loc = state.trucks[com]['location']
+    truck_loc = state.trucks[cam]['location']
     if driver_loc == truck_loc and driver_loc != dest:
         return []
     return False
 
-def en_otro_lugar(state, com, con, dest):
+
+def en_otro_lugar(state, cam, con, dest):
     driver_loc = state.drivers[con]['location']
-    truck_loc = state.trucks[com]['location']
+    truck_loc = state.trucks[cam]['location']
     if driver_loc == truck_loc:
-        # d = seleccionarSiguienteDestino()
-        # conducir_op(cam, con, d)
-        # conducir(cam, con, dest)
-        return []
+        d = seleccionarSiguienteDestino()
+        return [("conducir_op", cam, con, d), ("conducir", cam, con, dest)]
     return False
 
 
@@ -203,7 +242,7 @@ def en_otro_lugar(state, com, con, dest):
 
 
 pyhop.declare_methods(
-    'mover_conductor', conductor_en_destino, mover_conductor_m)
+    'mover_conductor', conductor_en_destino, conductor_en_otro_lugar)
 
 
 def iterative_goal_m(state, goal):
