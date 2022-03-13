@@ -164,13 +164,13 @@ def conducir_op(state, cam, con, dest):
     return False
 
 
-# def reset_camino_conductor_op(state, con):
-#     state.drivers[con]['path'] = []
-#     return state
+def reset_camino_conductor_op(state, con):
+    state.drivers[con]['path'] = []
+    return state
 
 
 pyhop.declare_operators(cargar_paquete, descargar_paquete,
-                        autobus_op, caminar_op, conducir_op)
+                        autobus_op, caminar_op, conducir_op, reset_camino_conductor_op)
 print('')
 pyhop.print_operators()
 
@@ -230,7 +230,7 @@ def conductor_en_destino(state, con, dest):
         print("Reset path")
         state.drivers[con]['path'] = []
         return []
-        # return [('reset_camino_conductor_op', con)]
+        #return [('reset_camino_conductor_op', con)]
     return False
 
 
@@ -291,6 +291,7 @@ def conductor_conseguido(state, con, dest):
         print("Reset path")
         state.drivers[con]['path'] = []
         return []
+        #return [('reset_camino_conductor_op', con)]
     return False
 
 
@@ -376,7 +377,6 @@ state.price = 0
 # Descripción del objetivo del problema
 goal = pyhop.Goal('goal')
 goal.data = [['package', 'P1', 'C1'], [
-    'package', 'P2', 'C2'], ['driver', 'D1', 'C0'], ['truck', 'T1', 'C0']]
-#goal.data = [['package', 'P1', 'C1']]
+    'package', 'P2', 'C2'], ['truck', 'T1', 'C0'], ['driver', 'D1', 'C0']]
 
 pyhop.pyhop(state, [('iterative_goal', goal)], verbose=2)
