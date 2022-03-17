@@ -1,3 +1,4 @@
+from lib2to3.pgen2 import driver
 from math import sqrt, pow, inf
 import pyhop
 
@@ -8,7 +9,8 @@ import pyhop
 # for city in state.cities["C0"]["connections"]:
 
 # Problem constants
-BUS_PRICE = 2
+BUDGET = 10
+BUS_PRICE_PER_KM = 0.1
 
 #############################
 # FUNCIONES AUXILIARES
@@ -22,9 +24,8 @@ def distance(c1, c2):
     y = pow(c1['Y']-c2['Y'], 2)
     return sqrt(x+y)
 
+
 # Selecciona el camion más cercano
-
-
 def seleccionarCamion(state, dest):
     min_distance = float('inf')
     best_truck = None
@@ -36,9 +37,8 @@ def seleccionarCamion(state, dest):
             min_distance = distance_to_dest
     return best_truck
 
+
 # Selecciona el conductor más cercano
-
-
 def seleccionarConductor(state, dest):
     min_distance = float('inf')
     best_con = None
@@ -97,6 +97,13 @@ def seleccionarSiguienteDestino(state, origin, destination, con, conduce=False):
 
     return best_dest
 
+
+def getBusPrice(origin, destination):
+    print(origin)
+    print(destination)
+    return BUS_PRICE_PER_KM*distance(origin, destination)
+
+
 #############################
 # OPERADORES
 #############################
@@ -120,16 +127,26 @@ def autobus_op(state, con, dest):
     driver_loc = state.drivers[con]['location']
     if driver_loc in state.intermediary_points.keys():
         if dest in state.intermediary_points[driver_loc]['connections']:
-            state.price += BUS_PRICE
+            if dest in state.intermediary_points.keys():
+                state.price += getBusPrice(state.intermediary_points[state.drivers[con]
+                                                                     ['location']]['location'], state.intermediary_points[dest]['location'])
+            else:
+                state.price += getBusPrice(
+                    state.intermediary_points[state.drivers[con]['location']]['location'], state.cities[dest]['location'])
             # state.time += distancia(state.drivers[con]["location"], dest)
             state.drivers[con]['path'].append(dest)
             state.drivers[con]['location'] = dest
             return state
     elif driver_loc in state.cities.keys():
         if dest in state.intermediary_points.keys() and dest in state.cities[driver_loc]['connections']:
+            if dest in state.intermediary_points.keys():
+                state.price += getBusPrice(state.cities[state.drivers[con]['location']]
+                                           ['location'], state.intermediary_points[dest]['location'])
+            else:
+                state.price += getBusPrice(
+                    state.cities[state.drivers[con]['location']]['location'], state.cities[dest]['location'])
             state.drivers[con]['path'].append(dest)
             state.drivers[con]['location'] = dest
-            state.price += BUS_PRICE
             # state.time += distancia(state.drivers[con]["location"], dest)
             return state
     return False
@@ -230,7 +247,7 @@ def conductor_en_destino(state, con, dest):
         print("Reset path")
         state.drivers[con]['path'] = []
         return []
-        #return [('reset_camino_conductor_op', con)]
+        # return [('reset_camino_conductor_op', con)]
     return False
 
 
@@ -252,17 +269,41 @@ pyhop.declare_methods(
 
 
 def autobus(state, con, d, dest):
-    return [
-        ('autobus_op', con, d),
-        ('mover_conductor', con, dest)
-    ]
+    if state.drivers[con]['location'] in state.cities.keys():
+        driver_location = state.cities[state.drivers[con]
+                                       ['location']]['location']
+    else:
+        driver_location = state.intermediary_points[state.drivers[con]
+                                                    ['location']]['location']
+    if d in state.cities.keys():
+        d_location = state.cities[d]['location']
+    else:
+        d_location = state.intermediary_points[d]['location']
+    if getBusPrice(driver_location, d_location) <= BUDGET - state.price:
+        return [
+            ('autobus_op', con, d),
+            ('mover_conductor', con, dest)
+        ]
+    return False
 
 
 def caminar(state, con, d, dest):
-    return [
-        ('caminar_op', con, d),
-        ('mover_conductor', con, dest)
-    ]
+    if state.drivers[con]['location'] in state.cities.keys():
+        driver_location = state.cities[state.drivers[con]
+                                       ['location']]['location']
+    else:
+        driver_location = state.intermediary_points[state.drivers[con]
+                                                    ['location']]['location']
+    if d in state.cities.keys():
+        d_location = state.cities[d]['location']
+    else:
+        d_location = state.intermediary_points[d]['location']
+    if getBusPrice(driver_location, d_location) > BUDGET - state.price:
+        return [
+            ('caminar_op', con, d),
+            ('mover_conductor', con, dest)
+        ]
+    return False
 
 
 pyhop.declare_methods('mover_conductor_paso', autobus, caminar)
@@ -291,7 +332,7 @@ def conductor_conseguido(state, con, dest):
         print("Reset path")
         state.drivers[con]['path'] = []
         return []
-        #return [('reset_camino_conductor_op', con)]
+        # return [('reset_camino_conductor_op', con)]
     return False
 
 
