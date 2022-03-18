@@ -559,7 +559,7 @@ state.packets = {'P1': {'point': 'C0'},
 state.trucks = {'T1': {'point': 'C1'},
                 'T2': {'point': 'C0'}}
 
-state.drivers = {'D1': {'point': 'C0', 'path': []},
+state.drivers = {'D1': {'point': 'P01', 'path': []},
                  'D2': {'point': 'C1', 'path': []}}
 
 state.time = 0
