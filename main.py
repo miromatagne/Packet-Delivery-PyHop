@@ -30,94 +30,79 @@ def distance(c1, c2):
     return sqrt(x+y)
 
 
-def seleccionarCamion(state, dest):
+def seleccionar_camion(state, dest):
     """
-    Selecciona el camión más cercano de una destinación en particular
+    Selecciona el camión más cercano de un destino en particular
 
     :param state: estado actual del problema
-    :param dest: destinación donde se necesita un camión
+    :param dest: destino donde se necesita un camión
     :return: el ID del camión más cercano
     """
     min_distance = float('inf')
     best_truck = None
     for cam in state.trucks:
-        distance_to_dest = distance(
-            state.cities[state.trucks[cam]['location']]['location'], state.cities[dest]['location'])
+        truck_point = state.trucks[cam]['point']
+        truck_location = state.points[truck_point]['location']
+        dest_location = state.points[dest]['location']
+
+        distance_to_dest = distance(truck_location, dest_location)
         if distance_to_dest < min_distance:
             best_truck = cam
             min_distance = distance_to_dest
+
     return best_truck
 
 
-def seleccionarConductor(state, dest):
+def seleccionar_conductor(state, dest):
     """
-    Selecciona el conductor más cercano de una destinación en particular
+    Selecciona el conductor más cercano de un destino en particular
 
     :param state: estado actual del problema
-    :param dest: destinación donde se necesita un conductor
+    :param dest: destino donde se necesita un conductor
     :return: el ID del conductor más cercano
     """
     min_distance = float('inf')
     best_con = None
     for con in state.drivers:
-        driver_loc = state.drivers[con]['location']
-        if driver_loc in state.intermediary_points.keys():
-            location = state.intermediary_points[driver_loc]['location']
-        else:
-            location = state.cities[state.drivers[con]
-                                    ['location']]['location']
-        distance_to_dest = distance(location, state.cities[dest]['location'])
+        driver_point = state.drivers[con]['point']
+        driver_location = state.points[driver_point]['location']
+        dest_location = state.points[dest]['location']
+
+        distance_to_dest = distance(driver_location, dest_location)
         if distance_to_dest < min_distance:
             best_con = con
             min_distance = distance_to_dest
+
     return best_con
 
 
-def seleccionarSiguienteDestino(state, origin, destination, con, conduce=False):
+def seleccionar_siguiente_destino(state, origin, dest, con, conduce=False):
     """
-    Selecciona la proxima destinacion intermedia durante un viaje de un origen
-    hasta una destinación.
+    Selecciona el próximo destino intermedio durante un viaje de un origen
+    hasta un destino.
 
     :param state: estado actual del problema
     :param origin: origen del viaje
-    :param destination: destinación final del viaje
+    :param dest: destino final del viaje
     :param con: conductor que está efectuando el viaje
     :param conduce: indica si el conductor está conduciendo un camión o no
     :return: el nombre del siguiente destino
     """
     min_distance = float('inf')
     best_dest = None
-    possible_next = []
-    origin_is_city = origin in state.cities.keys()
+    possible_next = state.points[origin]['connections']
 
-    if not origin_is_city:
-        possible_next = state.intermediary_points[origin]['connections']
-    else:
-        possible_next = state.cities[origin]['connections']
-
-    destination_is_city = destination in state.cities.keys()
     for next in possible_next:
-        next_is_city = next in state.cities.keys()
-
-        if conduce and not next_is_city:
+        if conduce and not is_city(next):
             continue
 
-        if not conduce and (origin_is_city and next_is_city):
+        if not conduce and (is_city(origin) and is_city(next)):
             continue
 
         if next not in state.drivers[con]['path']:
-            if next_is_city and destination_is_city:
-                distance_to_dest = distance(
-                    state.cities[destination]['location'], state.cities[next]['location'])
-            elif next_is_city and not destination_is_city:
-                distance_to_dest = distance(
-                    state.cities[next]['location'], state.intermediary_points[destination]['location'])
-            elif not next_is_city and destination_is_city:
-                distance_to_dest = distance(
-                    state.intermediary_points[next]['location'], state.cities[destination]['location'])
-            elif not next_is_city and not destination_is_city:
-                distance_to_dest = distance(
-                    state.intermediary_points[destination]['location'], state.intermediary_points[next]['location'])
+            next_location = state.points[next]['location']
+            dest_location = state.points[dest]['location']
+            distance_to_dest = distance(next_location, dest_location)
 
             if distance_to_dest < min_distance:
                 best_dest = next
@@ -126,19 +111,23 @@ def seleccionarSiguienteDestino(state, origin, destination, con, conduce=False):
     return best_dest
 
 
-def getBusPrice(origin, destination):
+def get_bus_price(origin, dest):
     """
     Devuelve el precio de un trayecto en autobús de un origen a una destinación.
     El cálculo se basa en el precio por kilómetro que cuesta el autobús y la distancia
     del trayecto a efectuar.
 
     :param origin: origen
-    :param destination: destinación
+    :param dest: destino
     """
-    print(origin)
-    print(destination)
-    return BUS_PRICE_PER_KM*distance(origin, destination)
+    return BUS_PRICE_PER_KM*distance(origin, dest)
 
+
+def is_city(point):
+    return point.startswith('C')
+
+def is_intermediary(point):
+    return point.startswith('P')
 
 #############################
 # OPERADORES
@@ -153,8 +142,11 @@ def cargar_paquete(state, paq, cam):
     :param paq: paquete a cargar
     :param cam: camión donde cargar el paquete
     """
-    if state.packets[paq]['location'] == state.trucks[cam]['location']:
-        state.packets[paq]['location'] = cam
+    pack_point = state.packets[paq]['point']
+    truck_point = state.packets[paq]['point']
+
+    if  pack_point == truck_point:
+        state.packets[paq]['point'] = cam
         return state
     return False
 
@@ -167,8 +159,9 @@ def descargar_paquete(state, paq, cam):
     :param paq: paquete a descargar
     :param cam: camión de donde descargar el paquete
     """
-    if state.packets[paq]['location'] == cam:
-        state.packets[paq]['location'] = state.trucks[cam]['location']
+    pack_point = state.packets[paq]['point']
+    if pack_point == cam:
+        state.packets[paq]['point'] = state.trucks[cam]['point']
         return state
     return False
 
@@ -179,34 +172,23 @@ def autobus_op(state, con, dest):
 
     :param state: estado actual del problema
     :param con: conductor que coge el autobús
-    :param dest: destinación del autobús
+    :param dest: destino del autobús
     """
-    driver_loc = state.drivers[con]['location']
-    if driver_loc in state.intermediary_points.keys():
-        if dest in state.intermediary_points[driver_loc]['connections']:
-            if dest in state.intermediary_points.keys():
-                state.price += getBusPrice(state.intermediary_points[state.drivers[con]
-                                                                     ['location']]['location'], state.intermediary_points[dest]['location'])
-            else:
-                state.price += getBusPrice(
-                    state.intermediary_points[state.drivers[con]['location']]['location'], state.cities[dest]['location'])
-            # state.time += distancia(state.drivers[con]["location"], dest)
-            state.drivers[con]['path'].append(dest)
-            state.drivers[con]['location'] = dest
-            return state
-    elif driver_loc in state.cities.keys():
-        if dest in state.intermediary_points.keys() and dest in state.cities[driver_loc]['connections']:
-            if dest in state.intermediary_points.keys():
-                state.price += getBusPrice(state.cities[state.drivers[con]['location']]
-                                           ['location'], state.intermediary_points[dest]['location'])
-            else:
-                state.price += getBusPrice(
-                    state.cities[state.drivers[con]['location']]['location'], state.cities[dest]['location'])
-            state.drivers[con]['path'].append(dest)
-            state.drivers[con]['location'] = dest
-            # state.time += distancia(state.drivers[con]["location"], dest)
-            return state
-    return False
+    driver_point = state.drivers[con]['point']
+
+    if not is_intermediary(driver_point) and not is_intermediary(dest):
+        return False
+
+    if dest not in state.points[driver_point]['connections']:
+        return False
+
+    driver_location = state.points[driver_point]['location']
+    dest_location = state.points[dest]['location']
+    state.price += get_bus_price(driver_location, dest_location)
+    state.drivers[con]['path'].append(dest)
+    state.drivers[con]['point'] = dest
+
+    return state
 
 
 def caminar_op(state, con, dest):
@@ -217,20 +199,18 @@ def caminar_op(state, con, dest):
     :param con: conductor que camina
     :param dest: destinación a donde camina el conductor
     """
-    driver_loc = state.drivers[con]['location']
-    if driver_loc in state.intermediary_points.keys():
-        if dest in state.intermediary_points[driver_loc]['connections']:
-            # state.time += distancia(driver_loc, dest)
-            state.drivers[con]['path'].append(dest)
-            state.drivers[con]['location'] = dest
-            return state
-    elif driver_loc in state.cities.keys():
-        if dest in state.intermediary_points.keys() and dest in state.cities[driver_loc]:
-            # state.time += distancia(driver_loc, dest)
-            state.drivers[con]['path'].append(dest)
-            state.drivers[con]['location'] = dest
-            return state
-    return False
+    driver_point = state.drivers[con]['point']
+
+    if not is_intermediary(driver_point) and not is_intermediary(dest):
+        return False
+
+    if dest not in state.points[driver_point]['connections']:
+        return False
+
+    # state.time += distancia(driver_loc, dest)
+    state.drivers[con]['path'].append(dest)
+    state.drivers[con]['point'] = dest
+    return state
 
 
 def conducir_op(state, cam, con, dest):
@@ -242,14 +222,22 @@ def conducir_op(state, cam, con, dest):
     :param con: conductor
     :param dest: destinación
     """
-    driver_loc = state.drivers[con]['location']
-    truck_loc = state.trucks[cam]['location']
-    if driver_loc == truck_loc and dest in state.cities[driver_loc]['connections']:
+    if dest == None:
+        return False
+
+    driver_point = state.drivers[con]['point']
+    truck_point = state.trucks[cam]['point']
+
+    if is_intermediary(driver_point) or is_intermediary(dest):
+        return False
+
+    if driver_point == truck_point and dest in state.points[driver_point]['connections']:
         # state.time += distance(driver_loc, dest)
         state.drivers[con]['path'].append(dest)
-        state.drivers[con]['location'] = dest
-        state.trucks[cam]['location'] = dest
+        state.drivers[con]['point'] = dest
+        state.trucks[cam]['point'] = dest
         return state
+
     return False
 
 
@@ -282,7 +270,7 @@ def paquete_en_destino(state, paq, dest):
     :param paq: paquete
     :param dest: destinación
     """
-    if state.packets[paq]['location'] == dest:
+    if state.packets[paq]['point'] == dest:
         return []
     return False
 
@@ -294,11 +282,11 @@ def paquete_en_otro_lugar(state, paq, dest):
     :param paq: paquete
     :param dest: destinación
     """
-    paq_loc = state.packets[paq]['location']
-    cam = seleccionarCamion(state, state.packets[paq]["location"])
-    con = seleccionarConductor(state, state.packets[paq]["location"])
+    pack_point = state.packets[paq]['point']
+    cam = seleccionar_camion(state, pack_point)
+    con = seleccionar_conductor(state, pack_point)
     return [
-        ('conseguir_camion_y_conductor', cam, con, paq_loc),
+        ('conseguir_camion_y_conductor', cam, con, pack_point),
         ('cargar_paquete', paq, cam),
         ('conducir', cam, con, dest),
         ('descargar_paquete', paq, cam)
@@ -318,7 +306,7 @@ def camion_en_destino(state, cam, dest):
     :param cam: camión
     :param dest: destinación
     """
-    if state.trucks[cam]['location'] == dest:
+    if state.trucks[cam]['point'] == dest:
         return []
     return False
 
@@ -330,10 +318,10 @@ def camion_en_otro_lugar(state, cam, dest):
     :param cam: camión
     :param dest: destinación
     """
-    truck_loc = state.trucks[cam]['location']
-    con = seleccionarConductor(state, truck_loc)
+    truck_point = state.trucks[cam]['point']
+    con = seleccionar_conductor(state, truck_point)
     return [
-        ('conseguir_conductor', con, truck_loc),
+        ('conseguir_conductor', con, truck_point),
         ('conducir', cam, con, dest)
     ]
 
@@ -343,34 +331,51 @@ pyhop.declare_methods('mover_camion', camion_en_destino, camion_en_otro_lugar)
 # mover_conductor
 
 
-def conductor_en_destino(state, con, dest):
+def conductor_en_destino(state, con, dest, puede_conducir=True):
     """
     El conductor ya está en su destino.
 
     :param con: conductor
     :param dest: destinación
     """
-    if state.drivers[con]['location'] == dest:
-        print("Reset path")
+    if state.drivers[con]['point'] == dest:
         state.drivers[con]['path'] = []
         return []
         # return [('reset_camino_conductor_op', con)]
     return False
 
 
-def conductor_en_otro_lugar(state, con, dest):
+def conductor_en_otro_lugar(state, con, dest, puede_conducir=True):
     """
     El conductor no está en su destino.
 
     :param conductor: conductor
     :param dest: destinación
     """
-    if state.drivers[con]['location'] != dest:
-        state.drivers[con]['path'].append(state.drivers[con]['location'])
-        driver_loc = state.drivers[con]['location']
-        d = seleccionarSiguienteDestino(
-            state, driver_loc, dest, con, conduce=False)
-        return [("mover_conductor_paso", con, d, dest)]
+    driver_point = state.drivers[con]['point']
+
+    if driver_point != dest:
+        state.drivers[con]['path'].append(driver_point)
+
+        res = []
+        d = None
+        cam = seleccionar_camion(state, driver_point)
+
+        if puede_conducir and state.trucks[cam]['point'] == driver_point:
+            d = seleccionar_siguiente_destino(
+                state, driver_point, dest, con, conduce=True)
+        
+        if d != None:
+            res.append(('conducir', cam, con, d))
+        else:
+            d = seleccionar_siguiente_destino(
+                state, driver_point, dest, con, conduce=False)
+        
+        res.append(('mover_conductor_paso', con, d, dest))
+        
+        res.append((('mover_conductor', con, dest, puede_conducir)))
+
+        return res
     return False
 
 
@@ -386,24 +391,15 @@ def autobus(state, con, d, dest):
 
     :param state: estado actual del problema
     :param con: conductor
-    :param d: siguiente destinación intermedia
+    :param d: siguiente destino intermedio
     :param dest: destinación final
     """
-    if state.drivers[con]['location'] in state.cities.keys():
-        driver_location = state.cities[state.drivers[con]
-                                       ['location']]['location']
-    else:
-        driver_location = state.intermediary_points[state.drivers[con]
-                                                    ['location']]['location']
-    if d in state.cities.keys():
-        d_location = state.cities[d]['location']
-    else:
-        d_location = state.intermediary_points[d]['location']
-    if getBusPrice(driver_location, d_location) <= BUDGET - state.price:
-        return [
-            ('autobus_op', con, d),
-            ('mover_conductor', con, dest)
-        ]
+    driver_point = state.drivers[con]['point']
+    driver_location = state.points[driver_point]['location']
+    d_location = state.points[d]['location']
+
+    if get_bus_price(driver_location, d_location) <= BUDGET - state.price:
+        return [('autobus_op', con, d)]
     return False
 
 
@@ -416,21 +412,12 @@ def caminar(state, con, d, dest):
     :param d: siguiente destinación intermedia
     :param dest: destinación final
     """
-    if state.drivers[con]['location'] in state.cities.keys():
-        driver_location = state.cities[state.drivers[con]
-                                       ['location']]['location']
-    else:
-        driver_location = state.intermediary_points[state.drivers[con]
-                                                    ['location']]['location']
-    if d in state.cities.keys():
-        d_location = state.cities[d]['location']
-    else:
-        d_location = state.intermediary_points[d]['location']
-    if getBusPrice(driver_location, d_location) > BUDGET - state.price:
-        return [
-            ('caminar_op', con, d),
-            ('mover_conductor', con, dest)
-        ]
+    driver_point = state.drivers[con]['point']
+    location = state.points[driver_point]['location']
+    d_location = state.points[d]['location']
+
+    if get_bus_price(location, d_location) > BUDGET - state.price:
+        return [('caminar_op', con, d)]
     return False
 
 
@@ -448,7 +435,7 @@ def camion_conseguido(state, cam, con, dest):
     :param con: conductor
     :param dest: destinación
     """
-    if state.trucks[cam]['location'] == dest:
+    if state.trucks[cam]['point'] == dest:
         return[('conseguir_conductor', con, dest)]
     return False
 
@@ -479,8 +466,7 @@ def conductor_conseguido(state, con, dest):
     :param con: conductor
     :param dest: destinación
     """
-    if state.drivers[con]['location'] == dest:
-        print("Reset path")
+    if state.drivers[con]['point'] == dest:
         state.drivers[con]['path'] = []
         return []
         # return [('reset_camino_conductor_op', con)]
@@ -495,7 +481,7 @@ def conductor_por_conseguir(state, con, dest):
     :param con: conductor
     :param dest: destinación
     """
-    if state.drivers[con]['location'] != dest:
+    if state.drivers[con]['point'] != dest:
         return [("mover_conductor", con, dest)]
     return False
 
@@ -515,10 +501,10 @@ def en_destino(state, cam, con, dest):
     :param con: conductor
     :param dest: destinación
     """
-    driver_loc = state.drivers[con]['location']
-    truck_loc = state.trucks[cam]['location']
-    if driver_loc == truck_loc and driver_loc == dest:
-        print("Reset path")
+    driver_point = state.drivers[con]['point']
+    truck_point = state.trucks[cam]['point']
+    if driver_point == truck_point and driver_point == dest:
+        # ("Reset path")
         state.drivers[con]['path'] = []
         return []
     return False
@@ -533,11 +519,11 @@ def en_otro_lugar(state, cam, con, dest):
     :param con: conductor
     :param dest: destinación
     """
-    driver_loc = state.drivers[con]['location']
-    truck_loc = state.trucks[cam]['location']
-    if driver_loc == truck_loc:
-        d = seleccionarSiguienteDestino(
-            state, truck_loc, dest, con, conduce=True)
+    driver_point = state.drivers[con]['point']
+    truck_point = state.trucks[cam]['point']
+    if driver_point == truck_point:
+        d = seleccionar_siguiente_destino(
+            state, driver_point, dest, con, conduce=True)
         return [("conducir_op", cam, con, d), ("conducir", cam, con, dest)]
     return False
 
@@ -546,21 +532,16 @@ pyhop.declare_methods('conducir', en_destino, en_otro_lugar)
 
 # ====================================================================== #
 
-
-pyhop.declare_methods(
-    'mover_conductor', conductor_en_destino, conductor_en_otro_lugar)
-
-
 def iterative_goal_m(state, goal):
     for data in goal.data:
         if data[0] == 'driver':
-            if state.drivers[data[1]]['location'] != data[2]:
-                return [('mover_conductor', data[1], data[2]), ('iterative_goal', goal)]
+            if state.drivers[data[1]]['point'] != data[2]:
+                return [('mover_conductor', data[1], data[2], False), ('iterative_goal', goal)]
         if data[0] == 'truck':
-            if state.trucks[data[1]]['location'] != data[2]:
+            if state.trucks[data[1]]['point'] != data[2]:
                 return [('mover_camion', data[1], data[2]), ('iterative_goal', goal)]
         if data[0] == 'package':
-            if state.packets[data[1]]['location'] != data[2]:
+            if state.packets[data[1]]['point'] != data[2]:
                 return [('mover_paquete', data[1], data[2]), ('iterative_goal', goal)]
     return []
 
@@ -569,21 +550,20 @@ pyhop.declare_methods('iterative_goal', iterative_goal_m)
 
 # Descripción del estado inicial del problema
 state = pyhop.State('state')
-state.cities = {'C0': {'location': {'X': 0, 'Y': 50}, 'connections': {'C1', 'C2', 'P01'}},
-                'C1': {'location': {'X': 100, 'Y': 50}, 'connections': {'C0', 'C2', 'P01', 'P12'}},
-                'C2': {'location': {'X': 50, 'Y': 0}, 'connections': {'C0', 'C1', 'P12'}}}
+state.points = {'C0': {'location': {'X': 0, 'Y': 50}, 'connections': {'C2', 'P01'}},
+                'C1': {'location': {'X': 100, 'Y': 50}, 'connections': {'C2', 'P01', 'P12'}},
+                'C2': {'location': {'X': 50, 'Y': 0}, 'connections': {'C0', 'C1', 'P12'}},
+                'P01': {'location': {'X': 50, 'Y': 100}, 'connections': {'C0', 'C1'}},
+                'P12': {'location': {'X': 75, 'Y': 0}, 'connections': {'C1', 'C2'}}}
 
-state.intermediary_points = {'P01': {'location': {'X': 50, 'Y': 100}, 'connections': {'C0', 'C1'}},
-                             'P12': {'location': {'X': 75, 'Y': 0}, 'connections': {'C1', 'C2'}}}
+state.packets = {'P1': {'point': 'C0'},
+                 'P2': {'point': 'C0'}}
 
-state.packets = {'P1': {'location': 'C0'},
-                 'P2': {'location': 'C0'}}
+state.trucks = {'T1': {'point': 'C1'},
+                'T2': {'point': 'C0'}}
 
-state.trucks = {'T1': {'location': 'C1'},
-                'T2': {'location': 'C0'}}
-
-state.drivers = {'D1': {'location': 'P01', 'path': []},
-                 'D2': {'location': 'C1', 'path': []}}
+state.drivers = {'D1': {'point': 'C2', 'path': []},
+                 'D2': {'point': 'C1', 'path': []}}
 
 state.time = 0
 state.price = 0
