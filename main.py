@@ -1,4 +1,3 @@
-from lib2to3.pgen2 import driver
 from math import sqrt, pow, inf
 import pyhop
 
@@ -353,30 +352,8 @@ def conductor_en_otro_lugar(state, con, dest, puede_conducir=True):
     :param dest: destinación
     """
     driver_point = state.drivers[con]['point']
-
-    if driver_point != dest:
-        state.drivers[con]['path'].append(driver_point)
-
-        res = []
-        d = None
-        cam = seleccionar_camion(state, driver_point)
-
-        if puede_conducir and state.trucks[cam]['point'] == driver_point:
-            d = seleccionar_siguiente_destino(
-                state, driver_point, dest, con, conduce=True)
-        
-        if d != None:
-            res.append(('conducir', cam, con, d))
-        else:
-            d = seleccionar_siguiente_destino(
-                state, driver_point, dest, con, conduce=False)
-        
-        res.append(('mover_conductor_paso', con, d, dest))
-        
-        res.append((('mover_conductor', con, dest, puede_conducir)))
-
-        return res
-    return False
+    state.drivers[con]['path'].append(driver_point)
+    return [('mover_conductor_paso', con, dest, puede_conducir), ('mover_conductor', con, dest, puede_conducir)]
 
 
 pyhop.declare_methods(
@@ -384,8 +361,18 @@ pyhop.declare_methods(
 
 # mover_conductor_paso
 
+def conducir_paso(state, con, dest, puede_conducir):
+    driver_point = state.drivers[con]['point']
+    cam = seleccionar_camion(state, driver_point)
 
-def autobus(state, con, d, dest):
+    if puede_conducir and state.trucks[cam]['point'] == driver_point:
+        d = seleccionar_siguiente_destino(state, driver_point, dest, con, conduce=True)
+        print('\n\n\nConduzco paso ' + cam + ' ' + con + '\n\n\n')
+        return [('conducir_op', cam, con, d)]
+
+    return False
+
+def autobus(state, con, dest, puede_conducir):
     """
     El conductor va a efectuar un trayecto en autobús si queda suficiente dinero.
 
@@ -396,14 +383,17 @@ def autobus(state, con, d, dest):
     """
     driver_point = state.drivers[con]['point']
     driver_location = state.points[driver_point]['location']
-    d_location = state.points[d]['location']
 
-    if get_bus_price(driver_location, d_location) <= BUDGET - state.price:
+    d = seleccionar_siguiente_destino(state, driver_point, dest, con, conduce=False)
+    dest_location = state.points[d]['location']
+
+    if get_bus_price(driver_location, dest_location) <= BUDGET - state.price:
         return [('autobus_op', con, d)]
+
     return False
 
 
-def caminar(state, con, d, dest):
+def caminar(state, con, dest, puede_conducir):
     """
     El conductor va a efectuar un trayecto caminando.
 
@@ -414,14 +404,17 @@ def caminar(state, con, d, dest):
     """
     driver_point = state.drivers[con]['point']
     location = state.points[driver_point]['location']
-    d_location = state.points[d]['location']
 
-    if get_bus_price(location, d_location) > BUDGET - state.price:
+    d = seleccionar_siguiente_destino(state, driver_point, dest, con, conduce=False)
+    dest_location = state.points[d]['location']
+
+    if get_bus_price(location, dest_location) > BUDGET - state.price:
         return [('caminar_op', con, d)]
+
     return False
 
 
-pyhop.declare_methods('mover_conductor_paso', autobus, caminar)
+pyhop.declare_methods('mover_conductor_paso', conducir_paso, autobus, caminar)
 
 # conseguir_camion_y_conductor(cam, con, dest)
 
@@ -433,10 +426,10 @@ def camion_conseguido(state, cam, con, dest):
     :param state: estado actual del problema
     :param cam: camión
     :param con: conductor
-    :param dest: destinación
+    :param dest: destino
     """
     if state.trucks[cam]['point'] == dest:
-        return[('conseguir_conductor', con, dest)]
+        return[('conseguir_conductor', con, dest)]  
     return False
 
 
@@ -494,37 +487,41 @@ pyhop.declare_methods('conseguir_conductor',
 
 def en_destino(state, cam, con, dest):
     """
-    El camión ha llegado a su destinación.
+    El camión ha llegado a su destino.
 
     :param state: estado actual del problema
     :param cam: camión
     :param con: conductor
-    :param dest: destinación
+    :param dest: destino
     """
     driver_point = state.drivers[con]['point']
     truck_point = state.trucks[cam]['point']
+
     if driver_point == truck_point and driver_point == dest:
         # ("Reset path")
         state.drivers[con]['path'] = []
         return []
+
     return False
 
 
 def en_otro_lugar(state, cam, con, dest):
     """
-    El camión no ha llegado a su destinación.
+    El camión no ha llegado a su destino.
 
     :param state: estado actual del problema
     :param cam: camión
     :param con: conductor
-    :param dest: destinación
+    :param dest: destino
     """
     driver_point = state.drivers[con]['point']
     truck_point = state.trucks[cam]['point']
+
     if driver_point == truck_point:
         d = seleccionar_siguiente_destino(
             state, driver_point, dest, con, conduce=True)
         return [("conducir_op", cam, con, d), ("conducir", cam, con, dest)]
+
     return False
 
 
@@ -550,8 +547,8 @@ pyhop.declare_methods('iterative_goal', iterative_goal_m)
 
 # Descripción del estado inicial del problema
 state = pyhop.State('state')
-state.points = {'C0': {'location': {'X': 0, 'Y': 50}, 'connections': {'C2', 'P01'}},
-                'C1': {'location': {'X': 100, 'Y': 50}, 'connections': {'C2', 'P01', 'P12'}},
+state.points = {'C0': {'location': {'X': 0, 'Y': 50}, 'connections': {'C1', 'C2', 'P01'}},
+                'C1': {'location': {'X': 100, 'Y': 50}, 'connections': {'C0', 'C2', 'P01', 'P12'}},
                 'C2': {'location': {'X': 50, 'Y': 0}, 'connections': {'C0', 'C1', 'P12'}},
                 'P01': {'location': {'X': 50, 'Y': 100}, 'connections': {'C0', 'C1'}},
                 'P12': {'location': {'X': 75, 'Y': 0}, 'connections': {'C1', 'C2'}}}
@@ -562,7 +559,7 @@ state.packets = {'P1': {'point': 'C0'},
 state.trucks = {'T1': {'point': 'C1'},
                 'T2': {'point': 'C0'}}
 
-state.drivers = {'D1': {'point': 'C2', 'path': []},
+state.drivers = {'D1': {'point': 'C0', 'path': []},
                  'D2': {'point': 'C1', 'path': []}}
 
 state.time = 0
