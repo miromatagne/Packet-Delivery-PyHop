@@ -352,7 +352,7 @@ pyhop.declare_methods('mover_camion', camion_en_destino, camion_en_otro_lugar)
 # mover_conductor
 
 
-def conductor_en_destino(state, con, dest, puede_conducir=True):
+def conductor_en_destino(state, con, dest):
     """
     El conductor ya está en su destino.
 
@@ -366,7 +366,7 @@ def conductor_en_destino(state, con, dest, puede_conducir=True):
     return False
 
 
-def conductor_en_otro_lugar(state, con, dest, puede_conducir=True):
+def conductor_en_otro_lugar(state, con, dest):
     """
     El conductor no está en su destino.
 
@@ -375,7 +375,7 @@ def conductor_en_otro_lugar(state, con, dest, puede_conducir=True):
     """
     driver_point = state.drivers[con]['point']
     state.drivers[con]['path'].append(driver_point)
-    return [('mover_conductor_paso', con, dest, puede_conducir), ('mover_conductor', con, dest, puede_conducir)]
+    return [('mover_conductor_paso', con, dest), ('mover_conductor', con, dest)]
 
 
 pyhop.declare_methods(
@@ -383,18 +383,18 @@ pyhop.declare_methods(
 
 # mover_conductor_paso
 
-def conducir_paso(state, con, dest, puede_conducir):
+def conducir_paso(state, con, dest):
     driver_point = state.drivers[con]['point']
     cam = seleccionar_camion(state, driver_point)
 
-    if puede_conducir and state.trucks[cam]['point'] == driver_point:
+    if state.trucks[cam]['point'] == driver_point:
         d = seleccionar_siguiente_destino(state, driver_point, dest, con, conduce=True)
         print('\n\n\nConduzco paso ' + cam + ' ' + con + '\n\n\n')
         return [('conducir_op', cam, con, d)]
 
     return False
 
-def autobus(state, con, dest, puede_conducir):
+def autobus(state, con, dest):
     """
     El conductor va a efectuar un trayecto en autobús si queda suficiente dinero.
 
@@ -415,7 +415,7 @@ def autobus(state, con, dest, puede_conducir):
     return False
 
 
-def caminar(state, con, dest, puede_conducir):
+def caminar(state, con, dest):
     """
     El conductor va a efectuar un trayecto caminando.
 
