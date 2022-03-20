@@ -552,7 +552,7 @@ def iterative_goal_m(state, goal):
     for data in goal.data:
         if data[0] == 'driver':
             if state.drivers[data[1]]['point'] != data[2]:
-                return [('mover_conductor', data[1], data[2], False), ('iterative_goal', goal)]
+                return [('mover_conductor', data[1], data[2]), ('iterative_goal', goal)]
         if data[0] == 'truck':
             if state.trucks[data[1]]['point'] != data[2]:
                 return [('cumplir_objetivo_camion', data[1], data[2]), ('iterative_goal', goal)]
