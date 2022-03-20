@@ -40,6 +40,9 @@ def seleccionar_camion(state, dest):
     min_distance = float('inf')
     best_truck = None
     for cam in state.trucks:
+        if state.trucks[cam]['objective']:
+            continue
+
         truck_point = state.trucks[cam]['point']
         truck_location = state.points[truck_point]['location']
         dest_location = state.points[dest]['location']
@@ -239,6 +242,9 @@ def conducir_op(state, cam, con, dest):
 
     return False
 
+def marcar_camion(state, cam):
+    state.trucks[cam]['objective'] = True
+    return state
 
 def reset_camino_conductor_op(state, con):
     """
@@ -251,7 +257,7 @@ def reset_camino_conductor_op(state, con):
 
 
 pyhop.declare_operators(cargar_paquete, descargar_paquete,
-                        autobus_op, caminar_op, conducir_op, reset_camino_conductor_op)
+                        autobus_op, caminar_op, conducir_op, marcar_camion, reset_camino_conductor_op)
 print('')
 pyhop.print_operators()
 
@@ -294,6 +300,22 @@ def paquete_en_otro_lugar(state, paq, dest):
 
 pyhop.declare_methods('mover_paquete', paquete_en_destino,
                       paquete_en_otro_lugar)
+
+# cumplir_objetivo_camion
+
+def camion_en_objetivo(state, cam, dest):
+    if state.trucks[cam]['point'] == dest:
+        return [('marcar_camion', cam)]
+    
+    return False
+
+
+def camion_no_en_objetivo(state, cam, dest):
+    return [('mover_camion', cam, dest), ('marcar_camion', cam)]
+
+
+pyhop.declare_methods('cumplir_objetivo_camion', camion_en_objetivo, camion_no_en_objetivo)
+
 
 # mover_camion
 
@@ -460,9 +482,7 @@ def conductor_conseguido(state, con, dest):
     :param dest: destinación
     """
     if state.drivers[con]['point'] == dest:
-        state.drivers[con]['path'] = []
         return []
-        # return [('reset_camino_conductor_op', con)]
     return False
 
 
@@ -498,7 +518,6 @@ def en_destino(state, cam, con, dest):
     truck_point = state.trucks[cam]['point']
 
     if driver_point == truck_point and driver_point == dest:
-        # ("Reset path")
         state.drivers[con]['path'] = []
         return []
 
@@ -536,7 +555,7 @@ def iterative_goal_m(state, goal):
                 return [('mover_conductor', data[1], data[2], False), ('iterative_goal', goal)]
         if data[0] == 'truck':
             if state.trucks[data[1]]['point'] != data[2]:
-                return [('mover_camion', data[1], data[2]), ('iterative_goal', goal)]
+                return [('cumplir_objetivo_camion', data[1], data[2]), ('iterative_goal', goal)]
         if data[0] == 'package':
             if state.packets[data[1]]['point'] != data[2]:
                 return [('mover_paquete', data[1], data[2]), ('iterative_goal', goal)]
@@ -556,8 +575,8 @@ state.points = {'C0': {'location': {'X': 0, 'Y': 50}, 'connections': {'C1', 'C2'
 state.packets = {'P1': {'point': 'C0'},
                  'P2': {'point': 'C0'}}
 
-state.trucks = {'T1': {'point': 'C1'},
-                'T2': {'point': 'C0'}}
+state.trucks = {'T1': {'point': 'C1', 'objective': False},
+                'T2': {'point': 'C0', 'objective': False}}
 
 state.drivers = {'D1': {'point': 'P01', 'path': []},
                  'D2': {'point': 'C1', 'path': []}}
