@@ -128,6 +128,7 @@ def get_bus_price(origin, dest):
 def is_city(point):
     return point.startswith('C')
 
+
 def is_intermediary(point):
     return point.startswith('P')
 
@@ -147,7 +148,7 @@ def cargar_paquete(state, paq, cam):
     pack_point = state.packets[paq]['point']
     truck_point = state.packets[paq]['point']
 
-    if  pack_point == truck_point:
+    if pack_point == truck_point:
         state.packets[paq]['point'] = cam
         return state
     return False
@@ -209,7 +210,6 @@ def caminar_op(state, con, dest):
     if dest not in state.points[driver_point]['connections']:
         return False
 
-    # state.time += distancia(driver_loc, dest)
     state.drivers[con]['path'].append(dest)
     state.drivers[con]['point'] = dest
     return state
@@ -234,7 +234,6 @@ def conducir_op(state, cam, con, dest):
         return False
 
     if driver_point == truck_point and dest in state.points[driver_point]['connections']:
-        # state.time += distance(driver_loc, dest)
         state.drivers[con]['path'].append(dest)
         state.drivers[con]['point'] = dest
         state.trucks[cam]['point'] = dest
@@ -242,9 +241,11 @@ def conducir_op(state, cam, con, dest):
 
     return False
 
+
 def marcar_camion(state, cam):
     state.trucks[cam]['objective'] = True
     return state
+
 
 def reset_camino_conductor_op(state, con):
     """
@@ -303,10 +304,11 @@ pyhop.declare_methods('mover_paquete', paquete_en_destino,
 
 # cumplir_objetivo_camion
 
+
 def camion_en_objetivo(state, cam, dest):
     if state.trucks[cam]['point'] == dest:
         return [('marcar_camion', cam)]
-    
+
     return False
 
 
@@ -314,7 +316,8 @@ def camion_no_en_objetivo(state, cam, dest):
     return [('mover_camion', cam, dest), ('marcar_camion', cam)]
 
 
-pyhop.declare_methods('cumplir_objetivo_camion', camion_en_objetivo, camion_no_en_objetivo)
+pyhop.declare_methods('cumplir_objetivo_camion',
+                      camion_en_objetivo, camion_no_en_objetivo)
 
 
 # mover_camion
@@ -383,16 +386,19 @@ pyhop.declare_methods(
 
 # mover_conductor_paso
 
+
 def conducir_paso(state, con, dest):
     driver_point = state.drivers[con]['point']
     cam = seleccionar_camion(state, driver_point)
 
     if state.trucks[cam]['point'] == driver_point:
-        d = seleccionar_siguiente_destino(state, driver_point, dest, con, conduce=True)
+        d = seleccionar_siguiente_destino(
+            state, driver_point, dest, con, conduce=True)
         print('\n\n\nConduzco paso ' + cam + ' ' + con + '\n\n\n')
         return [('conducir_op', cam, con, d)]
 
     return False
+
 
 def autobus(state, con, dest):
     """
@@ -406,7 +412,8 @@ def autobus(state, con, dest):
     driver_point = state.drivers[con]['point']
     driver_location = state.points[driver_point]['location']
 
-    d = seleccionar_siguiente_destino(state, driver_point, dest, con, conduce=False)
+    d = seleccionar_siguiente_destino(
+        state, driver_point, dest, con, conduce=False)
     dest_location = state.points[d]['location']
 
     if get_bus_price(driver_location, dest_location) <= BUDGET - state.price:
@@ -427,7 +434,8 @@ def caminar(state, con, dest):
     driver_point = state.drivers[con]['point']
     location = state.points[driver_point]['location']
 
-    d = seleccionar_siguiente_destino(state, driver_point, dest, con, conduce=False)
+    d = seleccionar_siguiente_destino(
+        state, driver_point, dest, con, conduce=False)
     dest_location = state.points[d]['location']
 
     if get_bus_price(location, dest_location) > BUDGET - state.price:
@@ -451,7 +459,7 @@ def camion_conseguido(state, cam, con, dest):
     :param dest: destino
     """
     if state.trucks[cam]['point'] == dest:
-        return[('conseguir_conductor', con, dest)]  
+        return[('conseguir_conductor', con, dest)]
     return False
 
 
@@ -548,6 +556,7 @@ pyhop.declare_methods('conducir', en_destino, en_otro_lugar)
 
 # ====================================================================== #
 
+
 def iterative_goal_m(state, goal):
     for data in goal.data:
         if data[0] == 'driver':
@@ -581,7 +590,6 @@ state.trucks = {'T1': {'point': 'C1', 'objective': False},
 state.drivers = {'D1': {'point': 'P01', 'path': []},
                  'D2': {'point': 'C1', 'path': []}}
 
-state.time = 0
 state.price = 0
 
 # Descripción del objetivo del problema
