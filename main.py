@@ -573,20 +573,32 @@ state.points = {'C0': {'location': {'X': 0, 'Y': 50}, 'connections': {'C1', 'C2'
                 'P12': {'location': {'X': 75, 'Y': 0}, 'connections': {'C1', 'C2'}}}
 
 state.packets = {'P1': {'point': 'C0'},
-                 'P2': {'point': 'C0'}}
+                 'P2': {'point': 'C0'},
+                 'P3': {'point': 'C2'}}
 
 state.trucks = {'T1': {'point': 'C1', 'objective': False},
-                'T2': {'point': 'C0', 'objective': False}}
+                'T2': {'point': 'C0', 'objective': False},
+                'T3': {'point': 'C0', 'objective': False}}
 
 state.drivers = {'D1': {'point': 'P01', 'path': []},
-                 'D2': {'point': 'C1', 'path': []}}
+                 'D2': {'point': 'C1', 'path': []},
+                 'D3': {'point': 'C1', 'path': []}}
 
 state.time = 0
 state.price = 0
 
 # Descripción del objetivo del problema
 goal = pyhop.Goal('goal')
-goal.data = [['package', 'P1', 'C1'], [
-    'package', 'P2', 'C2'], ['truck', 'T1', 'C0'], ['driver', 'D1', 'C0']]
+goal.data = [
+    ['package', 'P1', 'C1'],
+    ['package', 'P2', 'C2'],
+    ['package', 'P3', 'C1'],
+    ['truck', 'T1', 'C0'],
+    ['truck', 'T2', 'C2'],
+    ['truck', 'T3', 'C0'],
+    ['driver', 'D1', 'C0'],
+    ['driver', 'D2', 'C0'],
+    ['driver', 'D3', 'C1']
+]
 
 pyhop.pyhop(state, [('iterative_goal', goal)], verbose=2)
